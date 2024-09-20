@@ -4,10 +4,10 @@
 
 <br />
 
-This repository is used for the development of the API Gateway and Integration. Please use the `dev` branch for day-to-day commits, as the `main` branch is primarily used for pull requests to the main branch.
+This repository is used for the development of the API Gateway and Integration. Please use the `dev` branch for day-to-day commits, as the `main` branch is primarily used for pull requests to the main fork.
 
 > [!NOTE]  
-> Dili pa final ang features mga as if pani siya 
+> Dili pa final ang features
 
 <div align=center>
 
