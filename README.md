@@ -11,15 +11,12 @@ This repository is used for the development of the API Gateway and Integration. 
 
 <div align=center>
 
-TODO
+## Features
 
-| Feature                              | Implemented? | Remarks |
-|--------------------------------------|--------------|---------|
-| Rate Limiting and Throttling         | No           |         |
-| Data Encryption                      | No           |         |
-| Input Validation and Sanitization    | No           |         |
-| API Gateway Security Policies        | No           |         |
-| API Gateway Performance Optimization | No           |         |
-| Security Testing                     | No           |         |
+| Feature       | Implemented? | Remarks                                  |
+|---------------|--------------|------------------------------------------|
+| Rate Limiting | Yes          | $rateLimit = 100, $rateLimitTime = 3600  |
+| Caching       | Yes          | None                                     |
+| API Keys      | Yes          | To be revised pa                         |
 
 </div>

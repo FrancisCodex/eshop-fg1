@@ -9,6 +9,11 @@ $cache = new Psr16Adapter('Files');
 $rateLimit = 100;
 $rateLimitTime = 3600;
 
+// List of valid API keys
+$validApiKeys = [
+    'test',
+];
+
 // Function to sanitize cache key
 function sanitizeCacheKey($key) {
     return preg_replace('/[^a-zA-Z0-9_]/', '_', $key);
@@ -32,6 +37,12 @@ function checkRateLimit($ip) {
             $cache->set($cacheKey, $requestCount + 1, $rateLimitTime);
         }
     }
+}
+
+// Function to validate API key
+function validateApiKey($apiKey) {
+    global $validApiKeys;
+    return in_array($apiKey, $validApiKeys);
 }
 
 // Function to forward requests to microservices with caching
@@ -74,6 +85,21 @@ $clientIp = $_SERVER['REMOTE_ADDR'];
 
 // Check rate limit
 checkRateLimit($clientIp);
+
+// Get all headers
+$headers = getallheaders();
+$cleanHeaders = array();
+foreach ($headers as $key => $value) {
+    $cleanHeaders[trim($key)] = trim($value);
+}
+
+// Validate API key
+$apiKey = isset($cleanHeaders['API_KEY']) ? $cleanHeaders['API_KEY'] : '';
+if (!validateApiKey($apiKey)) {
+    http_response_code(401);
+    echo 'Invalid API key';
+    exit;
+}
 
 // Simple routing
 switch ($requestPath) {
