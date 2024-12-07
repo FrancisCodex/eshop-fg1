@@ -164,13 +164,18 @@ $requestPath = preg_replace('/^\/api\.php\//', '', $request);
 $pathParts = explode('/', trim($requestPath, '/'));
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 
+$queryString = $_SERVER['QUERY_STRING'] ?? '';
+
 if (count($pathParts) >= 1) {
     $service = $pathParts[0];
     
-    if ($service === 'products' || $service === 'categories') {
+    if ($service === 'product') {
         $baseUrl = 'http://localhost:8001/api.php';
         $endpoint = '/' . implode('/', $pathParts);
         $serviceUrl = $baseUrl . $endpoint;
+        if ($queryString) {
+            $serviceUrl .= '?' . $queryString;
+        }
     } elseif (isset($microservices[$service])) {
         $baseUrl = $microservices[$service]['base_url'];
         array_shift($pathParts);
