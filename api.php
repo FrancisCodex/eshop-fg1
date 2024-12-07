@@ -36,6 +36,7 @@ $microservices = [
             'verify' => '/verify-email/{token}',
             'assign_role' => '/role/assign',
             'revoke_role' => '/role/revoke',
+            'get_cart' => '/cart/{id}',
         ]
     ],
     'user' => [
@@ -46,7 +47,7 @@ $microservices = [
         ]
     ],
     'products' => [
-        'base_url' => 'http://localhost:8001/api.php',
+        'base_url' => 'http://localhost:8001/api.php/products',
         'endpoints' => [
             'list' => '/products',
             'categories' => '/categories', // Adjusted for direct access
@@ -89,7 +90,7 @@ function logRequest($request, $response, $status) {
         'ip' => $_SERVER['REMOTE_ADDR']
     ];
     
-    $logFile = __DIR__ . '/logs/api_' . date('Y-m-d') . '.log';
+    $logFile = __DIR__ . '/logs/api_access_for_' . date('Y-m-d') . '.log';
     file_put_contents($logFile, json_encode($log) . "\n", FILE_APPEND);
 }
 

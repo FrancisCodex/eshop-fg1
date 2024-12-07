@@ -1,27 +1,14 @@
 <?php
-// Database connection details
+// Database connection
 $host = 'localhost'; // Database host
-$port = '3306'; // Database port
+$db = 'eshop'; // Database name
 $user = 'root'; // Database user
-$dbname = 'eshop';
 $pass = ''; // Database password
 
 try {
-    // Create a new PDO instance without specifying the database name
-    $dsn = "mysql:host=$host;port=$port;charset=utf8";
-    $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // Turn on errors in the form of exceptions
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, // Fetch associative arrays by default
-        PDO::ATTR_EMULATE_PREPARES => false, // Disable emulation mode for prepared statements
-    ];
-    
-    // Establish a connection
-    $conn = new PDO($dsn, $user, $pass, $options);
-
-    // Select the database
-    $conn->exec("USE `$dbname`");
+    $conn = new PDO("mysql:host=$host;dbname=$db", $user, $pass);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    // Output error message in JSON format
     echo json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]);
     exit;
 }
