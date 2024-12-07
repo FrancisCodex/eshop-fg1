@@ -17,5 +17,5 @@
 
 ### How to run
 
->[!DANGER]
+>[!WARNING]
 > Full of Bugs XD
