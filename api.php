@@ -36,7 +36,6 @@ $microservices = [
             'verify' => '/verify-email/{token}',
             'assign_role' => '/role/assign',
             'revoke_role' => '/role/revoke',
-            'get_cart' => '/cart/{id}',
         ]
     ],
     'user' => [
@@ -44,15 +43,6 @@ $microservices = [
         'endpoints' => [
             'cart' => '/cart',
             'profile' => '/profile/update/{id}'
-        ]
-    ],
-    'products' => [
-        'base_url' => 'http://localhost:8001/api.php/products',
-        'endpoints' => [
-            'list' => '/products',
-            'categories' => '/categories', // Adjusted for direct access
-            'single' => '/products/{id}',
-            'search' => '/search/{query}'
         ]
     ],
 ];
