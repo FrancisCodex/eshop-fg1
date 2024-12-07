@@ -1,127 +1,215 @@
 <?php
 require 'vendor/autoload.php';
-
 use Phpfastcache\Helper\Psr16Adapter;
+use Phpfastcache\Config\ConfigurationOption;
 
-$cache = new Psr16Adapter('Files');
+if (!is_dir(__DIR__ . '/cache')) {
+    mkdir(__DIR__ . '/cache', 0777, true);
+}
+if (!is_dir(__DIR__ . '/logs')) {
+    mkdir(__DIR__ . '/logs', 0777, true);
+}
 
-// Rate limiting settings
-$rateLimit = 100;
-$rateLimitTime = 3600;
+$config = new ConfigurationOption([
+    'path' => __DIR__ . '/cache'
+]);
 
-// List of valid API keys
-$validApiKeys = [
-    'test',
+$cache = new Psr16Adapter('Files', $config);
+
+const API_KEYS = [
+    'test-key-1' => ['rate_limit' => 100, 'timeout' => 3600],
+    'test-key-2' => ['rate_limit' => 200, 'timeout' => 3600]
 ];
 
-// Function to sanitize cache key
-function sanitizeCacheKey($key) {
-    return preg_replace('/[^a-zA-Z0-9_]/', '_', $key);
-}
+$microservices = [
+    'auth' => [
+        'base_url' => 'http://localhost/eshop-fg1/api/auth',
+        'endpoints' => [
+            'login' => '/login',
+            'register' => '/register',
+            'logout' => '/logout',
+            'password_reset' => [
+                'request' => '/password/reset/request',
+                'reset' => '/password/reset'
+            ],
+            'profile' => '/profile/{id}',
+            'verify' => '/verify-email/{token}',
+            'assign_role' => '/role/assign',
+            'revoke_role' => '/role/revoke',
+        ]
+    ],
+    'user' => [
+        'base_url' => 'http://localhost/eshop-fg1/api/user',
+        'endpoints' => [
+            'cart' => '/cart',
+            'profile' => '/profile/update/{id}'
+        ]
+    ],
+    'products' => [
+        'base_url' => 'http://localhost:8001/api.php',
+        'endpoints' => [
+            'list' => '/products',
+            'categories' => '/categories', // Adjusted for direct access
+            'single' => '/products/{id}',
+            'search' => '/search/{query}'
+        ]
+    ],
+];
 
-// Function to check rate limit
-function checkRateLimit($ip) {
-    global $cache, $rateLimit, $rateLimitTime;
-
-    $cacheKey = 'rate_limit_' . sanitizeCacheKey($ip);
-    $requestCount = $cache->get($cacheKey);
-
-    if ($requestCount === null) {
-        $cache->set($cacheKey, 1, $rateLimitTime);
-    } else {
-        if ($requestCount >= $rateLimit) {
-            http_response_code(429);
-            echo 'Rate limit exceeded';
-            exit;
-        } else {
-            $cache->set($cacheKey, $requestCount + 1, $rateLimitTime);
-        }
-    }
-}
-
-// Function to validate API key
+// Validate API Key
 function validateApiKey($apiKey) {
-    global $validApiKeys;
-    return in_array($apiKey, $validApiKeys);
+    if (!isset($_SERVER['HTTP_X_API_KEY'])) {
+        return false;
+    }
+    return array_key_exists($_SERVER['HTTP_X_API_KEY'], API_KEYS);
 }
 
-// Function to forward requests to microservices with caching
+// Rate Limiting
+function checkRateLimit($apiKey) {
+    global $cache;
+    $key = "rate_limit_" . $apiKey;
+    $count = $cache->get($key) ?? 0;
+    
+    if ($count >= API_KEYS[$apiKey]['rate_limit']) {
+        return false;
+    }
+    
+    $cache->set($key, $count + 1, API_KEYS[$apiKey]['timeout']);
+    return true;
+}
+
+// Logger
+function logRequest($request, $response, $status) {
+    $log = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'method' => $_SERVER['REQUEST_METHOD'],
+        'path' => $request,
+        'status' => $status,
+        'api_key' => $_SERVER['HTTP_X_API_KEY'] ?? 'none',
+        'ip' => $_SERVER['REMOTE_ADDR']
+    ];
+    
+    $logFile = __DIR__ . '/logs/api_' . date('Y-m-d') . '.log';
+    file_put_contents($logFile, json_encode($log) . "\n", FILE_APPEND);
+}
+
+// Update forwardRequest function with error handling
 function forwardRequest($url, $method, $data = null) {
     global $cache;
+    
+    // Add debug log
+    error_log("Forwarding request to: " . $url);
+    error_log("Method: " . $method);
+    error_log("Data: " . json_encode($data));
 
     $cacheKey = md5($url . $method . json_encode($data));
-    $cachedResponse = $cache->get($cacheKey);
-
-    if ($cachedResponse) {
-        return $cachedResponse;
+    if ($method === 'GET') {
+        $cached = $cache->get($cacheKey);
+        if ($cached) return ['code' => 200, 'body' => $cached];
     }
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    // Forward headers
+    $headers = [];
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $headers[] = 'Authorization: ' . $_SERVER['HTTP_AUTHORIZATION'];
+    }
+    if (isset($_SERVER['CONTENT_TYPE'])) {
+        $headers[] = 'Content-Type: ' . $_SERVER['CONTENT_TYPE'];
+    }
+    $headers[] = 'Accept: application/json';
+    
+    if (!empty($headers)) {
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    }
+    
     if ($data) {
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     }
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Content-Type: application/x-www-form-urlencoded'
-    ));
-
     $response = curl_exec($ch);
+    
+    if (curl_errno($ch)) {
+        curl_close($ch);
+        return [
+            'code' => 500,
+            'body' => json_encode(['error' => 'Service unavailable'])
+        ];
+    }
+
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $cache->set($cacheKey, $response, 300);
+    if ($method === 'GET' && $httpCode === 200) {
+        $cache->set($cacheKey, $response, 300);
+    }
 
-    return $response;
+    return [
+        'code' => $httpCode ?: 500,
+        'body' => $response ?: json_encode(['error' => 'Empty response'])
+    ];
 }
 
-// Get the request path and method
-$requestPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$requestMethod = $_SERVER['REQUEST_METHOD'];
+// Main Request Handler
+header('Content-Type: application/json');
 
-// Get the client IP address
-$clientIp = $_SERVER['REMOTE_ADDR'];
-
-// Check rate limit
-checkRateLimit($clientIp);
-
-// Get all headers
-$headers = getallheaders();
-$cleanHeaders = array();
-foreach ($headers as $key => $value) {
-    $cleanHeaders[trim($key)] = trim($value);
-}
-
-// Validate API key
-$apiKey = isset($cleanHeaders['API_KEY']) ? $cleanHeaders['API_KEY'] : '';
-if (!validateApiKey($apiKey)) {
+if (!validateApiKey($_SERVER['HTTP_X_API_KEY'] ?? '')) {
     http_response_code(401);
-    echo 'Invalid API key';
+    echo json_encode(['error' => 'Invalid API key']);
     exit;
 }
 
-// Simple routing
-switch ($requestPath) {
-    case '/api/auth':
-        $serviceUrl = 'http://meow.com';
-        break;
-    case '/api/products':
-        $serviceUrl = 'http://arf.com';
-        break;
-    case '/api/cart':
-        $serviceUrl = 'http://ror.com';
-        break;
-    case '/api/hi':
-        header('Content-Type: application/json');
-        echo json_encode(['message' => 'Kumusta Kalibutan!', 'Pisot Ka' => 'true']);
-        exit;
-    default:
-        http_response_code(404);
-        echo 'Endpoint not found';
-        exit;
+if (!checkRateLimit($_SERVER['HTTP_X_API_KEY'])) {
+    http_response_code(429);
+    echo json_encode(['error' => 'Too many requests']);
+    exit;
 }
 
-// Forward the request to the corresponding microservice
-$response = forwardRequest($serviceUrl, $requestMethod, $_POST);
-echo $response;
+$request = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$requestPath = preg_replace('/^\/api\.php\//', '', $request);
+$pathParts = explode('/', trim($requestPath, '/'));
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+if (count($pathParts) >= 1) {
+    $service = $pathParts[0];
+    
+    if ($service === 'products' || $service === 'categories') {
+        $baseUrl = 'http://localhost:8001/api.php';
+        $endpoint = '/' . implode('/', $pathParts);
+        $serviceUrl = $baseUrl . $endpoint;
+    } elseif (isset($microservices[$service])) {
+        $baseUrl = $microservices[$service]['base_url'];
+        array_shift($pathParts);
+        $endpoint = '/' . implode('/', $pathParts);
+        $serviceUrl = $baseUrl . $endpoint;
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'Service not found']);
+        exit;
+    }
+    
+    $input = file_get_contents('php://input');
+    $data = $requestMethod === 'GET' ? $_GET : $input;
+    
+    $result = forwardRequest($serviceUrl, $requestMethod, $data);
+    
+    if (isset($result['code'])) {
+        http_response_code($result['code']);
+    } else {
+        http_response_code(500);
+    }
+    
+    logRequest($request, $result['body'] ?? '', $result['code'] ?? 500);
+    
+    if (isset($result['body'])) {
+        echo $result['body'];
+    } else {
+        echo json_encode(['error' => 'Invalid response']);
+    }
+} else {
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid request']);
+}
