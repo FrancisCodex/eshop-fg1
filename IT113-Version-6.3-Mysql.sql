@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS user_tokens (
     token VARCHAR(255) NOT NULL, 
     token_type VARCHAR(20) NOT NULL, -- 'JWT' for login tokens or 'EMAIL_VERIFICATION'
     issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-    expires_at TIMESTAMP NOT NULL, 
+    expires_at TIMESTAMP NULL, 
     CHECK (token_type IN ('JWT', 'EMAIL_VERIFICATION')),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
@@ -183,7 +183,7 @@ INSERT INTO product_inventory (product_id, quantity) VALUES
 ((SELECT product_id FROM products WHERE product_name = 'Denim Jacket'), 60),
 ((SELECT product_id FROM products WHERE product_name = 'Belts'), 90),
 ((SELECT product_id FROM products WHERE product_name = 'Sun Hat'), 110);
-/* 
+
 -- Revised cart dummy data with clear checkout selection
 INSERT INTO cart (user_id, product_id, quantity, is_selected_for_checkout) VALUES
 -- John Doe's cart
@@ -204,7 +204,7 @@ INSERT INTO cart (user_id, product_id, quantity, is_selected_for_checkout) VALUE
 ((SELECT user_id FROM users WHERE email = 'jane.smith@example.com'),
  (SELECT product_id FROM products WHERE product_name = 'Sunglasses'), 
  1, FALSE); -- Kept in cart, not for checkout
- */
+
 -- Insert dummy data into shipping_address
 INSERT INTO shipping_address (user_id, street_address, city, state, postal_code, country) VALUES
 ((SELECT user_id FROM users WHERE email = 'john.doe@example.com'), '123 Main St', 'Anytown', 'Anystate', '12345', 'USA'),
@@ -232,25 +232,34 @@ INSERT INTO orders (user_id, total_amount, address_id) VALUES
  (SELECT address_id FROM shipping_address WHERE user_id = 
   (SELECT user_id FROM users WHERE email = 'jane.smith@example.com')));
 
-/* -- Revised checkout data (linking orders to selected cart items)
-INSERT INTO checkout (order_id, cart_id) VALUES
+-- Revised checkout data (linking orders to selected cart items)
+INSERT INTO checkout (order_id, product_id, quantity) VALUES
 -- John Doe's checkout items
 ((SELECT order_id FROM orders WHERE user_id = 
   (SELECT user_id FROM users WHERE email = 'john.doe@example.com') LIMIT 1),
- (SELECT cart_id FROM cart WHERE user_id = 
+ (SELECT product_id FROM cart WHERE user_id = 
+  (SELECT user_id FROM users WHERE email = 'john.doe@example.com') 
+  AND product_id = (SELECT product_id FROM products WHERE product_name = 'Casual Shirt')),
+ (SELECT quantity FROM cart WHERE user_id = 
   (SELECT user_id FROM users WHERE email = 'john.doe@example.com') 
   AND product_id = (SELECT product_id FROM products WHERE product_name = 'Casual Shirt'))),
 
 ((SELECT order_id FROM orders WHERE user_id = 
   (SELECT user_id FROM users WHERE email = 'john.doe@example.com') LIMIT 1),
- (SELECT cart_id FROM cart WHERE user_id = 
+ (SELECT product_id FROM cart WHERE user_id = 
   (SELECT user_id FROM users WHERE email = 'john.doe@example.com') 
-  AND product_id = (SELECT product_id FROM products WHERE product_name = 'Leather Jacket'))), */
+  AND product_id = (SELECT product_id FROM products WHERE product_name = 'Leather Jacket')),
+ (SELECT quantity FROM cart WHERE user_id = 
+  (SELECT user_id FROM users WHERE email = 'john.doe@example.com') 
+  AND product_id = (SELECT product_id FROM products WHERE product_name = 'Leather Jacket'))),
 
 -- Jane Smith's checkout item
 ((SELECT order_id FROM orders WHERE user_id = 
   (SELECT user_id FROM users WHERE email = 'jane.smith@example.com') LIMIT 1),
- (SELECT cart_id FROM cart WHERE user_id = 
+ (SELECT product_id FROM cart WHERE user_id = 
+  (SELECT user_id FROM users WHERE email = 'jane.smith@example.com') 
+  AND product_id = (SELECT product_id FROM products WHERE product_name = 'Running Shoes')),
+ (SELECT quantity FROM cart WHERE user_id = 
   (SELECT user_id FROM users WHERE email = 'jane.smith@example.com') 
   AND product_id = (SELECT product_id FROM products WHERE product_name = 'Running Shoes')));
 
