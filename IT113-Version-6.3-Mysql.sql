@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS user_tokens (
     token VARCHAR(255) NOT NULL, 
     token_type VARCHAR(20) NOT NULL, -- 'JWT' for login tokens or 'EMAIL_VERIFICATION'
     issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, 
-    expires_at TIMESTAMP NULL, 
+    expires_at TIMESTAMP NOT NULL, 
     CHECK (token_type IN ('JWT', 'EMAIL_VERIFICATION')),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
