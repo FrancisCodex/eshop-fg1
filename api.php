@@ -41,8 +41,16 @@ $microservices = [
     'user' => [
         'base_url' => 'http://localhost/eshop-fg1/api/user',
         'endpoints' => [
+            'profile' => '/profile/update/{id}',
+        ]
+    ],
+    'shopping' => [
+        'base_url' => 'http://localhost:8002/api',
+        'endpoints' => [
             'cart' => '/cart',
-            'profile' => '/profile/update/{id}'
+            'checkout' => '/checkout/initiate',
+            'showAllUser' => '/users/show',
+            'login' => '/getToken',
         ]
     ],
 ];
@@ -189,6 +197,11 @@ if (count($pathParts) >= 1) {
     
     $input = file_get_contents('php://input');
     $data = $requestMethod === 'GET' ? $_GET : $input;
+    
+    error_log("Service: " . $service);
+    error_log("Service URL: " . $serviceUrl);
+    error_log("Request Method: " . $requestMethod);
+    error_log("Data: " . json_encode($data));
     
     $result = forwardRequest($serviceUrl, $requestMethod, $data);
     

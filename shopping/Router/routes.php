@@ -20,6 +20,7 @@ class Router
         // Remove query strings from the request URI
         $requestUri = strtok($request, '?');
         $requestMethod = $_SERVER['REQUEST_METHOD']; // Get the HTTP method
+        echo json_encode(['Request URL' => $requestUri]);
 
         foreach (self::$routes as $route) {
             // Match the route with regex and method

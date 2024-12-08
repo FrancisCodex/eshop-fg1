@@ -1,7 +1,7 @@
 <?php
 // Database connection
 $host = 'localhost'; // Database host
-$db = 'eshop'; // Database name
+$db = 'eshop-fg1'; // Database name
 $user = 'root'; // Database user
 $pass = ''; // Database password
 
