@@ -18,7 +18,8 @@ $cache = new Psr16Adapter('Files', $config);
 
 const API_KEYS = [
     'test-key-1' => ['rate_limit' => 100, 'timeout' => 3600],
-    'test-key-2' => ['rate_limit' => 200, 'timeout' => 3600]
+    'test-key-2' => ['rate_limit' => 200, 'timeout' => 3600],
+    'meow' => ['rate_limit' => 5, 'timeout' => 60],
 ];
 
 $microservices = [
@@ -51,6 +52,19 @@ $microservices = [
             'checkout' => '/checkout/initiate',
             'showAllUser' => '/users/show',
             'login' => '/getToken',
+            'initiateCheckout' => '/checkout/initiate',
+            'addToCart' => '/cart/items',
+            'showUser' => '/users/show',
+            'updateQuantity' => '/cart/items/{id}',
+            'deleteItem' => '/cart/items/{id}',
+            'removeAllItems' => '/cart',
+            'choosePayment' => '/checkout/payment',
+            'reviewOrder' => '/checkout/review{orderId}',
+            'confirmOrder' => '/checkout/confirm',
+            'shippedOrder' => '/checkout/ship_order',
+            'completeOrder' => '/checkout/complete_order',
+            'cancelOrder' => '/checkout/cancel',
+            'trackOrder' => '/checkout/track/{orderId}',
         ]
     ],
 ];
@@ -92,7 +106,6 @@ function logRequest($request, $response, $status) {
     file_put_contents($logFile, json_encode($log) . "\n", FILE_APPEND);
 }
 
-// Update forwardRequest function with error handling
 function forwardRequest($url, $method, $data = null) {
     global $cache;
     
@@ -152,7 +165,6 @@ function forwardRequest($url, $method, $data = null) {
     ];
 }
 
-// Main Request Handler
 header('Content-Type: application/json');
 
 if (!validateApiKey($_SERVER['HTTP_X_API_KEY'] ?? '')) {
