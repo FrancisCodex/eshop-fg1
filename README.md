@@ -6,16 +6,13 @@
 
 ### Features
 
-| Feature       | Implemented? |
-|---------------|--------------|
-| Rate Limiting | Yes          |
-| Caching       | Yes          |
-| API Keys      | Yes          |
-| Logging       | Yes          |
+| Feature            | Status | Description                                    |
+|--------------------|--------|------------------------------------------------|
+| API Key Validation | ✅      | Ensures clients provide a valid API key        |
+| Logging            | ✅      | Logs all incoming requests                     |
+| Rate Limiting      | ✅      | Restricts requests per client based on API key |
+| Caching            | ✅      | Caches responses for frequently requested data |
+| Monitoring         | ✅      | Tracks requests and responses                  |
+| Routing            | ✅      | Forwards requests to appropriate microservices |
 
 </div>
-
-### How to run
-
->[!WARNING]
-> Full of Bugs XD
