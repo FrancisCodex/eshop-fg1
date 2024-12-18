@@ -109,7 +109,6 @@ function logRequest($request, $response, $status) {
 function forwardRequest($url, $method, $data = null) {
     global $cache;
     
-    // Add debug log
     error_log("Forwarding request to: " . $url);
     error_log("Method: " . $method);
     error_log("Data: " . json_encode($data));
